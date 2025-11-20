@@ -114,12 +114,7 @@ func pollOnce(ctx context.Context, client *http.Client, endpoint string, out io.
 		}
 	}
 
-	// 3) Load Average
-	if loadAvg > loadAvgLimit {
-		fmt.Fprintf(out, "Load Average is too high: %d\n", int(loadAvg))
-	}
-
-	// 4) Disk
+	// 3) Disk
 	if diskTotal > 0 {
 		usedPct := float64(diskUsed) / float64(diskTotal)
 		if usedPct > diskUsageLimit {
@@ -127,6 +122,11 @@ func pollOnce(ctx context.Context, client *http.Client, endpoint string, out io.
 			freeMb := freeBytes / 1_000_000
 			fmt.Fprintf(out, "Free disk space is too low: %d Mb left\n", freeMb)
 		}
+	}
+	
+	// 4) Load Average
+	if loadAvg > loadAvgLimit {
+		fmt.Fprintf(out, "Load Average is too high: %d\n", int(loadAvg))
 	}
 
 	return nil

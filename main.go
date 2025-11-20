@@ -21,7 +21,7 @@ const (
 	netUsageLimit  = 0.90
 
 	errorThreshold = 3
-	pollInterval   = 2 * time.Second
+	pollInterval   = 200 * time.Millisecond
 
 	decBytesInMB  int64 = 1_000_000      // десятичные мегабайты для вывода Mb
 	decBitsInMbit int64 = 1_000_000      // десятичные мегабиты для вывода Mbit/s

@@ -96,25 +96,7 @@ func pollOnce(ctx context.Context, client *http.Client, endpoint string, out io.
 	netTotalBps, err := toI(fields[5]); if err != nil { return err }
 	netUsedBps,  err := toI(fields[6]); if err != nil { return err }
 
-	// 1) Network
-	if netTotalBps > 0 {
-		usedPct := float64(netUsedBps) / float64(netTotalBps)
-		if usedPct > netUsageLimit {
-			freeBps := netTotalBps - netUsedBps
-			// bytes/s → bits/s → Mbit/s (десятичные)
-			freeMbit := (freeBps * 8) / 1_000_000
-			fmt.Fprintf(out, "Network bandwidth usage high: %d Mbit/s available\n", freeMbit)
-		}
-	}
-	// 2) Memory
-	if memTotal > 0 {
-		memPct := float64(memUsed) / float64(memTotal) * 100
-		if memPct > memUsageLimit*100 {
-			fmt.Fprintf(out, "Memory usage too high: %d%%\n", int(memPct))
-		}
-	}
-
-	// 3) Disk
+	// 1) Disk 
 	if diskTotal > 0 {
 		usedPct := float64(diskUsed) / float64(diskTotal)
 		if usedPct > diskUsageLimit {
@@ -123,10 +105,29 @@ func pollOnce(ctx context.Context, client *http.Client, endpoint string, out io.
 			fmt.Fprintf(out, "Free disk space is too low: %d Mb left\n", freeMb)
 		}
 	}
-	
-	// 4) Load Average
+
+	// 2) Load Average 
 	if loadAvg > loadAvgLimit {
 		fmt.Fprintf(out, "Load Average is too high: %d\n", int(loadAvg))
+	}
+
+	// 3) Memory 
+	if memTotal > 0 {
+		memPct := float64(memUsed) / float64(memTotal) * 100
+		if memPct > memUsageLimit*100 {
+			fmt.Fprintf(out, "Memory usage too high: %d%%\n", int(memPct))
+		}
+	}
+
+	// 4) Network 
+	if netTotalBps > 0 {
+		usedPct := float64(netUsedBps) / float64(netTotalBps)
+		if usedPct > netUsageLimit {
+			freeBps := netTotalBps - netUsedBps
+			// bytes/s → bits/s → Mbit/s (десятичные)
+			freeMbit := (freeBps * 8) / 1_000_000
+			fmt.Fprintf(out, "Network bandwidth usage high: %d Mbit/s available\n", freeMbit)
+		}
 	}
 
 	return nil

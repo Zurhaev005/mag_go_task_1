@@ -124,7 +124,7 @@ func pollOnce(ctx context.Context, client *http.Client, endpoint string, out io.
 		usedPct := float64(diskUsed) / float64(diskTotal)
 		if usedPct > diskUsageLimit {
 			freeBytes := diskTotal - diskUsed
-			freeMb := (diskTotal - diskUsed) / 1_000_000
+			freeMb := freeBytes / 1_000_000
 			fmt.Fprintf(out, "Free disk space is too low: %d Mb left\n", freeMb)
 		}
 	}

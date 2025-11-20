@@ -15,21 +15,21 @@ import (
 const (
 	urlStats = "http://srv.msk01.gigacorp.local/_stats"
 
-	loadAvgLimit           = 30.0
-	memUsageLimit          = 0.80
-	diskUsageLimit         = 0.90
-	netUsageLimit          = 0.90
-	errorThreshold         = 3
-	pollInterval           = 2 * time.Second 
-	bytesInMB        int64 = 1024 * 1024
-	bitsInMbit       int64 = 1024 * 1024
+	loadAvgLimit   = 30.0
+	memUsageLimit  = 0.80
+	diskUsageLimit = 0.90
+	netUsageLimit  = 0.90
+
+	errorThreshold = 3
+	pollInterval   = 2 * time.Second
+
+	decBytesInMB  int64 = 1_000_000      // десятичные мегабайты для вывода Mb
+	decBitsInMbit int64 = 1_000_000      // десятичные мегабиты для вывода Mbit/s
 )
 
 func main() {
 	ctx := context.Background()
-	if err := run(ctx, os.Stdout, urlStats, pollInterval); err != nil {
-
-	}
+	_ = run(ctx, os.Stdout, urlStats, pollInterval)
 }
 
 func run(ctx context.Context, out io.Writer, endpoint string, interval time.Duration) error {
@@ -46,7 +46,6 @@ func run(ctx context.Context, out io.Writer, endpoint string, interval time.Dura
 				fmt.Fprintln(out, "Unable to fetch server statistic")
 			}
 		} else {
-			// сбрасываем счётчик ошибок
 			errCount = 0
 		}
 
@@ -83,72 +82,51 @@ func pollOnce(ctx context.Context, client *http.Client, endpoint string, out io.
 		return fmt.Errorf("bad fields: %d", len(fields))
 	}
 
-	// парсим значения
-	toF := func(s string) (float64, error) {
-		return strconv.ParseFloat(strings.TrimSpace(s), 64)
-	}
+	toF := func(s string) (float64, error) { return strconv.ParseFloat(strings.TrimSpace(s), 64) }
 	toI := func(s string) (int64, error) {
 		v, e := strconv.ParseInt(strings.TrimSpace(s), 10, 64)
 		return v, e
 	}
 
-	loadAvg, err := toF(fields[0])
-	if err != nil {
-		return err
-	}
-	memTotal, err := toI(fields[1])
-	if err != nil {
-		return err
-	}
-	memUsed, err := toI(fields[2])
-	if err != nil {
-		return err
-	}
-	diskTotal, err := toI(fields[3])
-	if err != nil {
-		return err
-	}
-	diskUsed, err := toI(fields[4])
-	if err != nil {
-		return err
-	}
-	netTotalBps, err := toI(fields[5])
-	if err != nil {
-		return err
-	}
-	netUsedBps, err := toI(fields[6])
-	if err != nil {
-		return err
-	}
+	loadAvg, err := toF(fields[0]); if err != nil { return err }
+	memTotal, err := toI(fields[1]); if err != nil { return err }
+	memUsed,  err := toI(fields[2]); if err != nil { return err }
+	diskTotal, err := toI(fields[3]); if err != nil { return err }
+	diskUsed,  err := toI(fields[4]); if err != nil { return err }
+	netTotalBps, err := toI(fields[5]); if err != nil { return err }
+	netUsedBps,  err := toI(fields[6]); if err != nil { return err }
 
-	// условия
-	if loadAvg > loadAvgLimit {
-		fmt.Fprintf(out, "Load Average is too high: %.0f\n", loadAvg)
-	}
-
-	if memTotal > 0 {
-		memPct := float64(memUsed) / float64(memTotal) * 100
-		if memPct > memUsageLimit*100 {
-			fmt.Fprintf(out, "Memory usage too high: %.0f%%\n", memPct)
-		}
-	}
-
-	if diskTotal > 0 {
-		usedPct := float64(diskUsed) / float64(diskTotal)
-		if usedPct > diskUsageLimit {
-			freeBytes := diskTotal - diskUsed
-			freeMb := freeBytes / bytesInMB
-			fmt.Fprintf(out, "Free disk space is too low: %d Mb left\n", freeMb)
-		}
-	}
-
+	// 1) Network
 	if netTotalBps > 0 {
 		usedPct := float64(netUsedBps) / float64(netTotalBps)
 		if usedPct > netUsageLimit {
 			freeBps := netTotalBps - netUsedBps
-			// переведём байты/с в мегабиты/с: (bytes * 8) / 1024 / 1024
-			freeMbit := (freeBps * 8) / bitsInMbit
+			// bytes/s → bits/s → Mbit/s (десятичные)
+			freeMbit := (freeBps * 8) / decBitsInMbit
 			fmt.Fprintf(out, "Network bandwidth usage high: %d Mbit/s available\n", freeMbit)
+		}
+	}
+
+	// 2) Memory
+	if memTotal > 0 {
+		memPct := float64(memUsed) / float64(memTotal) * 100
+		if memPct > memUsageLimit*100 {
+			fmt.Fprintf(out, "Memory usage too high: %d%%\n", int(memPct))
+		}
+	}
+
+	// 3) Load Average
+	if loadAvg > loadAvgLimit {
+		fmt.Fprintf(out, "Load Average is too high: %d\n", int(loadAvg))
+	}
+
+	// 4) Disk
+	if diskTotal > 0 {
+		usedPct := float64(diskUsed) / float64(diskTotal)
+		if usedPct > diskUsageLimit {
+			freeBytes := diskTotal - diskUsed
+			freeMb := freeBytes / decBytesInMB
+			fmt.Fprintf(out, "Free disk space is too low: %d Mb left\n", freeMb)
 		}
 	}
 

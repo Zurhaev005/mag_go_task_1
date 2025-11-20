@@ -102,9 +102,8 @@ func pollOnce(ctx context.Context, client *http.Client, endpoint string, out io.
 		if usedPct > netUsageLimit {
 			freeBps := netTotalBps - netUsedBps
 			// bytes/s → bits/s → Mbit/s (десятичные)
-			freeMbit := (freeBps * 8) / decBitsInMbit
+			freeMbit := (freeBps * 8) / 1_000_000
 			fmt.Fprintf(out, "Network bandwidth usage high: %d Mbit/s available\n", freeMbit)
-		}
 	}
 
 	// 2) Memory
@@ -125,7 +124,7 @@ func pollOnce(ctx context.Context, client *http.Client, endpoint string, out io.
 		usedPct := float64(diskUsed) / float64(diskTotal)
 		if usedPct > diskUsageLimit {
 			freeBytes := diskTotal - diskUsed
-			freeMb := freeBytes / decBytesInMB
+			freeMb := (diskTotal - diskUsed) / 1_000_000
 			fmt.Fprintf(out, "Free disk space is too low: %d Mb left\n", freeMb)
 		}
 	}

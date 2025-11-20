@@ -104,8 +104,8 @@ func pollOnce(ctx context.Context, client *http.Client, endpoint string, out io.
 			// bytes/s → bits/s → Mbit/s (десятичные)
 			freeMbit := (freeBps * 8) / 1_000_000
 			fmt.Fprintf(out, "Network bandwidth usage high: %d Mbit/s available\n", freeMbit)
+		}
 	}
-
 	// 2) Memory
 	if memTotal > 0 {
 		memPct := float64(memUsed) / float64(memTotal) * 100
